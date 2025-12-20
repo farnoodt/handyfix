@@ -1,0 +1,13 @@
+{
+  "name": "handyfix",
+  "private": true,
+  "workspaces": ["apps/*", "packages/*"],
+  "scripts": {
+    "dev:web": "npm run dev -w apps/handyfix-web",
+    "dev:portal": "npm run dev -w apps/handyfix-portal",
+    "dev": "concurrently -n web,portal \"npm run dev:web\" \"npm run dev:portal\""
+  },
+  "devDependencies": {
+    "concurrently": "^9.0.0"
+  }
+}

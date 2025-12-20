@@ -1,0 +1,93 @@
+/* ===== Header/Nav baseline styling (override) ===== */
+.page {
+  min-height: 100vh;
+  background: #fff;
+  color: #111827;
+}
+
+.header {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  background: #fff;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.header-inner {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 14px 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 800;
+  color: #4c1d95;
+  text-decoration: none;
+}
+
+.brand-mark {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  background: #6d28d9;
+  display: inline-block;
+}
+
+.nav-links {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.nav-links a,
+.nav-links .linklike {
+  color: #4b5563;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.nav-links a:hover,
+.nav-links .linklike:hover {
+  color: #111827;
+  text-decoration: underline;
+}
+
+.linklike {
+  background: transparent;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  font: inherit;
+}
+
+.nav-chat {
+  padding: 8px 12px;
+  border-radius: 10px;
+  border: 1px solid #e5e7eb;
+  background: #f9fafb;
+  font-weight: 700;
+}
+
+.nav-call {
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: #6d28d9;
+  border: 1px solid #6d28d9;
+  color: #fff !important;
+  text-decoration: none;
+  font-weight: 800;
+}
+
+.nav-call:hover {
+  background: #5b21b6;
+  border-color: #5b21b6;
+  text-decoration: none;
+}

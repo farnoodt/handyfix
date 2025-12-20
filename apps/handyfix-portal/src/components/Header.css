@@ -1,0 +1,86 @@
+/* Header.css */
+.portal-header{
+  background: #3f4046;
+  border-bottom: 1px solid rgba(255,255,255,.12);
+  position: sticky;
+  top: 0;
+  z-index: 50;
+}
+
+.portal-header-inner{
+  width: min(1100px, 92vw);
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 14px 0;
+}
+
+.portal-brand{
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 800;
+  color: #fff;
+  text-decoration: none;
+}
+
+.portal-brand-dot{
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  background: #6d28d9;
+  box-shadow: 0 0 0 4px rgba(109,40,217,.20);
+}
+
+.portal-nav{
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.portal-link{
+  color: rgba(255,255,255,.88);
+  font-weight: 700;
+  text-decoration: none;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid transparent;
+}
+
+.portal-link:hover{
+  background: rgba(255,255,255,.10);
+  border-color: rgba(255,255,255,.14);
+  color: #fff;
+}
+
+.portal-link.active{
+  background: rgba(255,255,255,.16);
+  border-color: rgba(255,255,255,.18);
+  color: #fff;
+}
+
+.portal-spacer{ flex: 1; }
+
+.portal-user{
+  color: rgba(255,255,255,.70);
+  font-size: 14px;
+  white-space: nowrap;
+}
+
+.btn-primary{
+  background: #6d28d9;
+  color: #fff;
+  border: none;
+  padding: 10px 14px;
+  border-radius: 14px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.btn-primary:hover{ filter: brightness(1.05); }
+
+@media (max-width: 820px){
+  .portal-user{ display: none; }
+}
