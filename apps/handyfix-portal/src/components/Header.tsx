@@ -1,6 +1,4 @@
 import { NavLink } from "react-router-dom";
-import "./Header.css";
-
 
 <header className="portal-header">
   <div className="portal-header-inner">
