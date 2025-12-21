@@ -1,85 +1,95 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
-import * as api from "@handyfix/api-client";
-import { decodeJwt, getRolesFromPayload } from "./jwt";
+import { login as apiLogin, me as apiMe, type AuthResponse } from "@handyfix/api-client";
 
 type AuthUser = {
-  userId: string;
   email: string;
-  fullName?: string | null;
+  fullName: string | null;
   roles: string[];
 };
 
-type AuthContextValue = {
-  token: string | null;
+export type AuthContextValue = {
   user: AuthUser | null;
+  token: string | null;
   isAuthed: boolean;
-  isAdmin: boolean;
+  loading: boolean;
   login: (email: string, password: string) => Promise<void>;
-  register: (fullName: string, email: string, password: string) => Promise<void>;
   logout: () => void;
 };
 
-const TOKEN_KEY = "handyfix_token";
+const TOKEN_KEY = import.meta.env.VITE_TOKEN_KEY || "handyfix_token";
+
 const AuthContext = createContext<AuthContextValue | null>(null);
 
-function buildUserFromToken(token: string): AuthUser | null {
-  const payload = decodeJwt(token);
-  if (!payload) return null;
-
-  const roles = getRolesFromPayload(payload);
-  const userId = payload.sub || "";
-  const email = payload.email || "";
-  const fullName = payload.name || null;
-
-  if (!userId || !email) return null;
-  return { userId, email, fullName, roles };
-}
-
 export function AuthProvider({ children }: { children: React.ReactNode }) {
+  const [user, setUser] = useState<AuthUser | null>(null);
   const [token, setToken] = useState<string | null>(() => localStorage.getItem(TOKEN_KEY));
-  const [user, setUser] = useState<AuthUser | null>(() => (token ? buildUserFromToken(token) : null));
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (token) {
-      localStorage.setItem(TOKEN_KEY, token);
-      setUser(buildUserFromToken(token));
-    } else {
-      localStorage.removeItem(TOKEN_KEY);
-      setUser(null);
-    }
+    let cancelled = false;
+
+    (async () => {
+      setLoading(true);
+      try {
+        if (!token) {
+          if (!cancelled) setUser(null);
+          return;
+        }
+
+        const u: any = await apiMe();
+        if (cancelled) return;
+
+        setUser({
+          email: u?.email ?? u?.user?.email ?? "unknown",
+          fullName: u?.fullName ?? u?.user?.fullName ?? null,
+          roles: u?.roles ?? u?.user?.roles ?? [],
+        });
+      } catch {
+        // token invalid
+        localStorage.removeItem(TOKEN_KEY);
+        if (!cancelled) {
+          setToken(null);
+          setUser(null);
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
   }, [token]);
 
-  const login = async (email: string, password: string) => {
-    // force clean string types (prevents FormDataEntryValue / undefined issues upstream)
-    const cleanEmail = String(email ?? "").trim();
-    const cleanPassword = String(password ?? "");
+  async function login(email: string, password: string) {
+    const res: AuthResponse = await apiLogin({ email, password });
 
-    const res = await api.login({ email: cleanEmail, password: cleanPassword });
-    setToken(res.token);
-  };
+    localStorage.setItem(TOKEN_KEY, res.token);
+    setToken(res.token); // ✅ triggers rerender everywhere
 
-  const register = async (fullName: string, email: string, password: string) => {
-    const cleanFullName = String(fullName ?? "").trim();
-    const cleanEmail = String(email ?? "").trim();
-    const cleanPassword = String(password ?? "");
+    setUser({
+      email: res.email,
+      fullName: res.fullName,
+      roles: res.roles,
+    });
+  }
 
-    const res = await api.register({ fullName: cleanFullName, email: cleanEmail, password: cleanPassword });
-    setToken(res.token);
-  };
-
-  const logout = () => setToken(null);
+  function logout() {
+    localStorage.removeItem(TOKEN_KEY);
+    setToken(null);  // ✅ triggers rerender everywhere
+    setUser(null);
+  }
 
   const value = useMemo<AuthContextValue>(
     () => ({
-      token,
       user,
-      isAuthed: !!token && !!user,
-      isAdmin: !!user?.roles?.includes("Admin"),
+      token,
+      isAuthed: !!token,
+      loading,
       login,
-      register,
-      logout
+      logout,
     }),
-    [token, user]
+    [user, token, loading]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
@@ -87,6 +97,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
 export function useAuth() {
   const ctx = useContext(AuthContext);
-  if (!ctx) throw new Error("useAuth must be used inside AuthProvider");
+  if (!ctx) throw new Error("useAuth must be used inside <AuthProvider />");
   return ctx;
 }
