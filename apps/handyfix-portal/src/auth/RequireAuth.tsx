@@ -1,12 +1,16 @@
 import { Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "./AuthProvider";
 
-export default function RequireAuth({ children }: { children: JSX.Element }) {
+export function RequireAuth({ children }: { children: React.ReactNode }) {
   const { isAuthed, loading } = useAuth();
   const location = useLocation();
 
-  if (loading) return <div>Loading...</div>;
-  if (!isAuthed) return <Navigate to="/login" replace state={{ from: location.pathname }} />;
+  if (loading) return null; // or <Spinner />
 
-  return children;
+  if (!isAuthed) {
+    const from = location.pathname + location.search + location.hash;
+    return <Navigate to="/login" replace state={{ from }} />;
+  }
+
+  return <>{children}</>;
 }

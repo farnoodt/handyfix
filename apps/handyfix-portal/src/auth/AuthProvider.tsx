@@ -1,5 +1,10 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
-import { login as apiLogin, me as apiMe, type AuthResponse } from "@handyfix/api-client";
+import {
+  login as apiLogin,
+  me as apiMe,
+  setAccessToken,
+  type AuthResponse,
+} from "@handyfix/api-client";
 
 type AuthUser = {
   email: string;
@@ -16,37 +21,59 @@ export type AuthContextValue = {
   logout: () => void;
 };
 
-const TOKEN_KEY = import.meta.env.VITE_TOKEN_KEY || "handyfix_token";
+const TOKEN_KEY = import.meta.env.VITE_TOKEN_KEY ?? "handyfix_token";
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
+function normalizeUser(u: any): AuthUser {
+  return {
+    email: u?.email ?? u?.user?.email ?? "unknown",
+    fullName: u?.fullName ?? u?.user?.fullName ?? null,
+    roles: u?.roles ?? u?.user?.roles ?? [],
+  };
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
+  const [token, setToken] = useState<string | null>(() => {
+    try {
+      return localStorage.getItem(TOKEN_KEY);
+    } catch {
+      return null;
+    }
+  });
+
   const [user, setUser] = useState<AuthUser | null>(null);
-  const [token, setToken] = useState<string | null>(() => localStorage.getItem(TOKEN_KEY));
   const [loading, setLoading] = useState(true);
 
+  // ✅ Sync token into api-client whenever it changes (including first load)
+  useEffect(() => {
+    setAccessToken(token);
+  }, [token]);
+
+  // Rehydrate session when token changes
   useEffect(() => {
     let cancelled = false;
 
-    (async () => {
+    async function loadMe() {
       setLoading(true);
-      try {
-        if (!token) {
-          if (!cancelled) setUser(null);
-          return;
+
+      if (!token) {
+        if (!cancelled) {
+          setUser(null);
+          setLoading(false);
         }
+        return;
+      }
 
-        const u: any = await apiMe();
+      try {
+        const me = await apiMe();
         if (cancelled) return;
-
-        setUser({
-          email: u?.email ?? u?.user?.email ?? "unknown",
-          fullName: u?.fullName ?? u?.user?.fullName ?? null,
-          roles: u?.roles ?? u?.user?.roles ?? [],
-        });
+        setUser(normalizeUser(me));
       } catch {
-        // token invalid
-        localStorage.removeItem(TOKEN_KEY);
+        try {
+          localStorage.removeItem(TOKEN_KEY);
+        } catch {}
+
         if (!cancelled) {
           setToken(null);
           setUser(null);
@@ -54,29 +81,39 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       } finally {
         if (!cancelled) setLoading(false);
       }
-    })();
+    }
 
+    void loadMe();
     return () => {
       cancelled = true;
     };
   }, [token]);
 
   async function login(email: string, password: string) {
-    const res: AuthResponse = await apiLogin({ email, password });
+    setLoading(true);
+    try {
+      const res: AuthResponse = await apiLogin({ email, password });
 
-    localStorage.setItem(TOKEN_KEY, res.token);
-    setToken(res.token); // ✅ triggers rerender everywhere
+      try {
+        localStorage.setItem(TOKEN_KEY, res.token);
+      } catch {}
 
-    setUser({
-      email: res.email,
-      fullName: res.fullName,
-      roles: res.roles,
-    });
+      setToken(res.token);
+      setUser({
+        email: res.email,
+        fullName: res.fullName,
+        roles: res.roles,
+      });
+    } finally {
+      setLoading(false);
+    }
   }
 
   function logout() {
-    localStorage.removeItem(TOKEN_KEY);
-    setToken(null);  // ✅ triggers rerender everywhere
+    try {
+      localStorage.removeItem(TOKEN_KEY);
+    } catch {}
+    setToken(null);
     setUser(null);
   }
 
