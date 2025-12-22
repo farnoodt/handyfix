@@ -1,10 +1,14 @@
 import { useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthProvider";
+import { useEffect } from "react";
+
 
 type AuthRedirectState = {
   from?: string;
 };
+
+
 
 export default function Login() {
   const { login } = useAuth();
@@ -36,6 +40,18 @@ export default function Login() {
       setLoading(false);
     }
   }
+
+  useEffect(() => {
+    try {
+      const reason = sessionStorage.getItem("auth_reason");
+      if (reason === "expired") {
+        setError("Your session expired. Please log in again.");
+        sessionStorage.removeItem("auth_reason");
+      }
+    } catch {
+      // ignore
+    }
+  }, []);
 
   return (
     <div className="container" style={{ marginTop: 24 }}>

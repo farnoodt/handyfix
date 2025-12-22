@@ -18,7 +18,7 @@ export default function BlogCard({ post }: { post: BlogPost }) {
           ))}
         </div>
 
-        <Link className="btn btn-outline" to={`/blog/${post.slug}`}>
+        <Link className="btn btn-outline" to={`/api/blog/${post.slug}`}>
           Read
         </Link>
       </div>

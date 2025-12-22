@@ -18,6 +18,10 @@ export type AuthContextValue = {
   token: string | null;
   isAuthed: boolean;
   loading: boolean;
+
+  hasRole: (role: string) => boolean;
+  isAdmin: boolean;
+
   login: (email: string, password: string) => Promise<void>;
   logout: () => void;
 };
@@ -26,11 +30,15 @@ const TOKEN_KEY = import.meta.env.VITE_TOKEN_KEY ?? "handyfix_token";
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
-function normalizeUser(u: any): AuthUser {
+function normalizeUser(meResult: any): AuthUser {
+  // Your API returns ApiResponse.Success(new { ... })
+  // so meResult can be either { id,email,fullName,Roles } OR { user: {...} } depending on wrappers.
+  const obj = meResult?.user ?? meResult ?? {};
+
   return {
-    email: u?.email ?? u?.user?.email ?? "unknown",
-    fullName: u?.fullName ?? u?.user?.fullName ?? null,
-    roles: u?.roles ?? u?.user?.roles ?? [],
+    email: obj?.email ?? obj?.Email ?? "unknown",
+    fullName: obj?.fullName ?? obj?.FullName ?? null,
+    roles: obj?.roles ?? obj?.Roles ?? [],
   };
 }
 
@@ -46,18 +54,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // ✅ Sync token into api-client whenever it changes (including first load)
-  useEffect(() => {
-      setAccessToken(token);
-    }, [token]);
+  // Role helpers (must be inside component to access `user`)
+  const hasRole = (role: string) =>
+    !!user?.roles?.some((r) => r.toLowerCase() === role.toLowerCase());
 
+  // Keep api-client token in sync with auth state
+  useEffect(() => {
+    setAccessToken(token);
+  }, [token]);
+
+ // Global 401 handler => clear session
   useEffect(() => {
     setUnauthorizedHandler(() => {
+      try {
+        sessionStorage.setItem("auth_reason", "expired");
+      } catch {
+        // ignore
+      }
+
       try {
         localStorage.removeItem(TOKEN_KEY);
       } catch {
         // ignore
       }
+
       setToken(null);
       setUser(null);
     });
@@ -67,7 +87,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
-  // Rehydrate session when token changes
+
+  // Rehydrate session when token changes (including first load)
   useEffect(() => {
     let cancelled = false;
 
@@ -89,7 +110,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       } catch {
         try {
           localStorage.removeItem(TOKEN_KEY);
-        } catch {}
+        } catch {
+          // ignore
+        }
 
         if (!cancelled) {
           setToken(null);
@@ -113,7 +136,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       try {
         localStorage.setItem(TOKEN_KEY, res.token);
-      } catch {}
+      } catch {
+        // ignore
+      }
 
       setToken(res.token);
       setUser({
@@ -129,7 +154,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   function logout() {
     try {
       localStorage.removeItem(TOKEN_KEY);
-    } catch {}
+    } catch {
+      // ignore
+    }
     setToken(null);
     setUser(null);
   }
@@ -140,6 +167,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       token,
       isAuthed: !!token,
       loading,
+      hasRole,
+      isAdmin: hasRole("Admin"),
       login,
       logout,
     }),

@@ -1,13 +1,16 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
 import * as api from "@handyfix/api-client";
+import Spinner from "../../components/Spinner";
+import ApiErrorView from "../../components/ApiErrorView";
+import { useAsync } from "../../hooks/useAsync";
 
-function formatDt(dt: string | null) {
+function formatDt(dt: string | null | undefined) {
   if (!dt) return "—";
   try {
     return new Date(dt).toLocaleString();
   } catch {
-    return dt;
+    return String(dt);
   }
 }
 
@@ -34,80 +37,92 @@ function joinAddress(job: api.JobDetailDto) {
   return parts.length ? parts.join(", ") : "—";
 }
 
+type PageData = {
+  job: api.JobDetailDto;
+  review: api.ReviewDto | null;
+  serviceItemName: string;
+};
+
 export default function MyJobDetail() {
   const { id } = useParams<{ id: string }>();
 
-  const [job, setJob] = useState<api.JobDetailDto | null>(null);
-  const [review, setReview] = useState<api.ReviewDto | null>(null);
-  const [serviceItemName, setServiceItemName] = useState<string>("—");
-
   const [rating, setRating] = useState(5);
   const [comment, setComment] = useState("");
-  const [err, setErr] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
+
   const [uploadBusy, setUploadBusy] = useState<null | api.MediaType>(null);
+
+  const {
+    data,
+    setData,
+    error,
+    setError,
+    loading,
+    run,
+  } = useAsync<PageData>(async () => {
+    if (!id) throw new Error("Missing job id.");
+
+    const [j, r] = await Promise.all([
+      api.getJob(id),
+      api.getReview(id).catch(() => null),
+    ]);
+
+    let serviceItemName = "—";
+    if (j.serviceItemId) {
+      const found = await api.getItemById(j.serviceItemId.toString());
+      serviceItemName = found?.name ?? `#${j.serviceItemId}`;
+    }
+
+    return { job: j, review: r, serviceItemName };
+  }, [id]);
+
+  const job = data?.job ?? null;
+  const review = data?.review ?? null;
+  const serviceItemName = data?.serviceItemName ?? "—";
 
   const canReview = useMemo(() => (job ? isCompleted(job.status) : false), [job]);
 
-  useEffect(() => {
-    (async () => {
-      setErr(null);
-      setLoading(true);
-      try {
-        if (!id) return;
-
-        const [j, r] = await Promise.all([
-          api.getJob(id),
-          api.getReview(id).catch(() => null),
-        ]);
-
-        setJob(j);
-        setReview(r);
-
-        if (j.serviceItemId) {
-          const items = await api.getItems();
-          const found = items.find((x) => x.id === j.serviceItemId);
-          setServiceItemName(found?.name ?? `#${j.serviceItemId}`);
-        } else {
-          setServiceItemName("—");
-        }
-      } catch (ex: any) {
-        setErr(ex?.message || "Failed to load job");
-      } finally {
-        setLoading(false);
-      }
-    })();
-  }, [id]);
-
   const submitReview = async () => {
     if (!id) return;
-    setErr(null);
+    setError(null);
+
     try {
       const r = await api.createReview(id, { rating, comment: comment.trim() || null });
-      setReview(r);
-    } catch (ex: any) {
-      setErr(ex?.message || "Failed to submit review");
+      setData((prev) => (prev ? { ...prev, review: r } : prev));
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : "Failed to submit review";
+      setError(msg);
     }
   };
 
   const upload = async (type: api.MediaType, file: File) => {
     if (!id || !job) return;
-    setErr(null);
+
+    setError(null);
     setUploadBusy(type);
+
     try {
       const m = await api.uploadJobMedia(id, type, file);
-      setJob({ ...job, media: [...job.media, m] });
-    } catch (ex: any) {
-      setErr(ex?.message || "Upload failed");
+
+      // Update local job media optimistically
+      setData((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          job: { ...prev.job, media: [...prev.job.media, m] },
+        };
+      });
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : "Upload failed";
+      setError(msg);
     } finally {
       setUploadBusy(null);
     }
   };
 
-  if (!id) return <div>Missing job id.</div>;
-  if (loading) return <div>Loading...</div>;
-  if (err) return <div style={{ color: "crimson" }}>{err}</div>;
-  if (!job) return <div>Job not found.</div>;
+  if (!id) return <ApiErrorView title="Missing job id" message="No job id was provided in the URL." />;
+  if (loading) return <Spinner label="Loading job..." />;
+  if (error) return <ApiErrorView title="Could not load job" message={error} />;
+  if (!job) return <ApiErrorView title="Job not found" message="This job may not exist or you may not have access." />;
 
   return (
     <div style={{ display: "grid", gap: 16 }}>
@@ -194,6 +209,17 @@ export default function MyJobDetail() {
                 }}
               />
             </label>
+
+            <button
+              className="btn"
+              type="button"
+              disabled={loading}
+              onClick={() => void run()}
+              style={{ borderRadius: 12 }}
+              title="Reload"
+            >
+              Refresh
+            </button>
           </div>
         </div>
 
@@ -201,7 +227,13 @@ export default function MyJobDetail() {
 
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 10 }}>
           {job.media.map((m) => (
-            <a key={m.id} href={m.url} target="_blank" rel="noreferrer" style={{ textDecoration: "none", color: "inherit" }}>
+            <a
+              key={m.id}
+              href={m.url}
+              target="_blank"
+              rel="noreferrer"
+              style={{ textDecoration: "none", color: "inherit" }}
+            >
               <div style={{ border: "1px solid rgba(0,0,0,.08)", borderRadius: 12, overflow: "hidden" }}>
                 <img src={m.url} alt={m.type} style={{ width: "100%", height: 160, objectFit: "cover", display: "block" }} />
                 <div style={{ padding: 10, fontSize: 13, display: "flex", justifyContent: "space-between" }}>
@@ -245,7 +277,9 @@ export default function MyJobDetail() {
               <textarea rows={4} value={comment} onChange={(e) => setComment(e.target.value)} />
             </label>
 
-            <button onClick={submitReview}>Submit review</button>
+            <button className="btn-primary" onClick={submitReview}>
+              Submit review
+            </button>
           </div>
         ) : (
           <div style={{ opacity: 0.75 }}>Review available after the job is completed.</div>

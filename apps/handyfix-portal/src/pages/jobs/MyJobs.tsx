@@ -1,9 +1,12 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useMemo } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "../../auth/AuthProvider";
 import { getMyJobs, type JobSummaryDto } from "@handyfix/api-client";
+import ApiErrorView from "../../components/ApiErrorView";
+import { useAsync } from "../../hooks/useAsync";
 
-function formatDt(dt: string) {
+function formatDt(dt?: string | null) {
+  if (!dt) return "";
   try {
     return new Date(dt).toLocaleString();
   } catch {
@@ -13,46 +16,51 @@ function formatDt(dt: string) {
 
 export default function MyJobs() {
   const { isAuthed } = useAuth();
-  const [jobs, setJobs] = useState<JobSummaryDto[]>([]);
-  const [err, setErr] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
+
+  const { data, error, loading } = useAsync<JobSummaryDto[]>(
+    async () => {
+      // If not authed, don't call API
+      if (!isAuthed) return [];
+      return await getMyJobs();
+    },
+    [isAuthed]
+  );
+
+  const jobs = data ?? [];
 
   // Optional: sort newest first
   const rows = useMemo(() => {
     return [...jobs].sort(
-      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      (a: any, b: any) =>
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
     );
   }, [jobs]);
 
-  useEffect(() => {
-    (async () => {
-      if (!isAuthed) return;
-      setLoading(true);
-      try {
-        setErr(null);
-        const j = await getMyJobs();
-        setJobs(j);
-      } catch (ex: any) {
-        setErr(ex?.message || "Failed to load jobs");
-      } finally {
-        setLoading(false);
-      }
-    })();
-  }, [isAuthed]);
-
-  if (!isAuthed) return <div>Please login to see your jobs.</div>;
-  if (loading) return <div>Loading...</div>;
+  if (error) return <ApiErrorView title="Could not load jobs" message={error} />;
 
   return (
     <div>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 12 }}>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "baseline",
+          gap: 12,
+        }}
+      >
         <h2>My Jobs</h2>
-        <Link className="btn-primary" to="/book" style={{ textDecoration: "none", display: "inline-block" }}>
+        <Link
+          className="btn-primary"
+          to="/book"
+          style={{ textDecoration: "none", display: "inline-block" }}
+        >
           + Book a Job
         </Link>
       </div>
 
-      {err && <div style={{ color: "crimson", marginBottom: 12 }}>{err}</div>}
+      {loading && (
+        <div style={{ opacity: 0.75, marginBottom: 12 }}>Loading…</div>
+      )}
 
       <div className="card" style={{ padding: 0, overflow: "hidden" }}>
         <table style={{ width: "100%", borderCollapse: "collapse" }}>
@@ -67,10 +75,12 @@ export default function MyJobs() {
           </thead>
 
           <tbody>
-            {rows.map((j) => (
+            {rows.map((j: any) => (
               <tr key={j.id} style={tr}>
                 <td style={td}>
-                  <div style={{ fontWeight: 800 }}>{j.title}</div>
+                  <div style={{ fontWeight: 800 }}>
+                    {j.title ?? "Untitled job"}
+                  </div>
                   <div style={{ fontSize: 12, opacity: 0.7 }}>#{j.id}</div>
                 </td>
 
@@ -81,9 +91,14 @@ export default function MyJobs() {
                 <td style={td}>{formatDt(j.createdAt)}</td>
 
                 <td style={td}>
-                  {j.scheduledStart
-                    ? `${formatDt(j.scheduledStart)}${j.scheduledEnd ? ` → ${formatDt(j.scheduledEnd)}` : ""}`
-                    : <span style={{ opacity: 0.7 }}>—</span>}
+                  {j.scheduledStart ? (
+                    <>
+                      {formatDt(j.scheduledStart)}
+                      {j.scheduledEnd ? ` → ${formatDt(j.scheduledEnd)}` : ""}
+                    </>
+                  ) : (
+                    <span style={{ opacity: 0.7 }}>—</span>
+                  )}
                 </td>
 
                 <td style={{ ...td, textAlign: "right" }}>
@@ -92,7 +107,7 @@ export default function MyJobs() {
               </tr>
             ))}
 
-            {rows.length === 0 && (
+            {!loading && rows.length === 0 && (
               <tr>
                 <td style={{ ...td, padding: 18 }} colSpan={5}>
                   <div style={{ opacity: 0.75 }}>No jobs yet.</div>
@@ -114,17 +129,17 @@ const th: React.CSSProperties = {
   padding: "12px 14px",
   fontSize: 13,
   opacity: 0.85,
-  borderBottom: "1px solid rgba(0,0,0,.08)"
+  borderBottom: "1px solid rgba(0,0,0,.08)",
 };
 
 const td: React.CSSProperties = {
   padding: "12px 14px",
   borderBottom: "1px solid rgba(0,0,0,.06)",
-  verticalAlign: "top"
+  verticalAlign: "top",
 };
 
 const tr: React.CSSProperties = {
-  background: "transparent"
+  background: "transparent",
 };
 
 const badge: React.CSSProperties = {
@@ -134,5 +149,5 @@ const badge: React.CSSProperties = {
   fontSize: 12,
   fontWeight: 800,
   background: "rgba(109,40,217,.12)",
-  border: "1px solid rgba(109,40,217,.22)"
+  border: "1px solid rgba(109,40,217,.22)",
 };

@@ -15,17 +15,17 @@ export type BlogPostListDto = {
 export type BlogPostDetailDto = BlogPostListDto & { contentMarkdown: string };
 
 export async function listBlog(publishedOnly = true) {
-  return unwrap<BlogPostListDto[]>(http.get<ApiResponse<BlogPostListDto[]>>(`/blog?publishedOnly=${publishedOnly}`));
+  return unwrap<BlogPostListDto[]>(http.get<ApiResponse<BlogPostListDto[]>>(`/api/blog?publishedOnly=${publishedOnly}`));
 }
 
 export async function getBlog(slug: string, allowUnpublished = false) {
-  return unwrap<BlogPostDetailDto>(http.get<ApiResponse<BlogPostDetailDto>>(`/blog/${slug}?allowUnpublished=${allowUnpublished}`));
+  return unwrap<BlogPostDetailDto>(http.get<ApiResponse<BlogPostDetailDto>>(`/api/blog/${slug}?allowUnpublished=${allowUnpublished}`));
 }
 
 export async function upsertBlog(id: string, req: { title: string; summary: string; contentMarkdown: string; coverImageUrl?: string | null; published: boolean }) {
-  return unwrap<BlogPostDetailDto>(http.put<ApiResponse<BlogPostDetailDto>>(`/blog/${id}`, req));
+  return unwrap<BlogPostDetailDto>(http.put<ApiResponse<BlogPostDetailDto>>(`/api/blog/${id}`, req));
 }
 
 export async function deleteBlog(id: string) {
-  return unwrap<any>(http.delete<ApiResponse<any>>(`/blog/${id}`));
+  return unwrap<any>(http.delete<ApiResponse<any>>(`/api/blog/${id}`));
 }
