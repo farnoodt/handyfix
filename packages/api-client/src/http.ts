@@ -3,6 +3,21 @@
 let accessToken: string | null = null;
 let baseUrl = ""; // optional prefix for all relative URLs
 
+let onUnauthorized: (() => void) | null = null;
+
+export function setUnauthorizedHandler(handler: (() => void) | null) {
+  onUnauthorized = handler;
+}
+
+export class HttpError extends Error {
+  status: number;
+  constructor(status: number, message: string) {
+    super(message);
+    this.name = "HttpError";
+    this.status = status;
+  }
+}
+
 export function setAccessToken(token: string | null) {
   accessToken = token;
 }
@@ -33,22 +48,24 @@ function buildHeaders(initHeaders?: HeadersInit, body?: unknown) {
     headers.set("Authorization", `Bearer ${accessToken}`);
   }
 
-  // If it's FormData, DO NOT set Content-Type (browser will set boundary)
   const isFormData =
     typeof FormData !== "undefined" && body instanceof FormData;
 
   if (isFormData) {
-    // If caller set it, remove it to avoid missing boundary issues
     if (headers.has("Content-Type")) headers.delete("Content-Type");
     return headers;
   }
 
-  // Default JSON content-type when body is a plain object and caller didn't set it
-  if (body !== undefined && body !== null) {
-    const isString = typeof body === "string";
-    if (!isString && !headers.has("Content-Type")) {
-      headers.set("Content-Type", "application/json");
-    }
+  // If body is a plain object, default to JSON content type
+  const hasBody = body !== undefined && body !== null;
+  const isPlainObject =
+    typeof body === "object" &&
+    !(body instanceof Blob) &&
+    !(body instanceof ArrayBuffer) &&
+    !(body instanceof URLSearchParams);
+
+  if (hasBody && isPlainObject && !headers.has("Content-Type")) {
+    headers.set("Content-Type", "application/json");
   }
 
   return headers;
@@ -61,16 +78,16 @@ function buildBody(body?: unknown): BodyInit | undefined {
 
   const isFormData =
     typeof FormData !== "undefined" && body instanceof FormData;
-
   if (isFormData) return body as FormData;
 
-  // default JSON
+  // JSON for objects/numbers/booleans/arrays
   return JSON.stringify(body);
 }
 
 async function parseResponse<T>(res: Response): Promise<T> {
   if (!res.ok) {
     let msg = `Request failed (${res.status})`;
+
     try {
       const ct = res.headers.get("content-type") || "";
       if (ct.includes("application/json")) {
@@ -83,7 +100,12 @@ async function parseResponse<T>(res: Response): Promise<T> {
     } catch {
       // ignore
     }
-    throw new Error(msg);
+
+    if (res.status === 401) {
+      onUnauthorized?.();
+    }
+
+    throw new HttpError(res.status, msg);
   }
 
   if (res.status === 204) return undefined as unknown as T;
@@ -93,20 +115,35 @@ async function parseResponse<T>(res: Response): Promise<T> {
     return (await res.json()) as T;
   }
 
-  // fallback for non-json responses
   return (await res.text()) as unknown as T;
 }
+
 
 /**
  * apiFetch<T> returns parsed JSON (or text), with auth header attached.
  */
 export async function apiFetch<T>(url: string, init: RequestInit = {}): Promise<T> {
+  const headers = buildHeaders(init.headers, init.body);
+
+  // If body is a string and caller didn't set Content-Type,
+  // assume JSON when it looks like JSON.
+  if (typeof init.body === "string" && !headers.has("Content-Type")) {
+    const s = init.body.trim();
+    if (s.startsWith("{") || s.startsWith("[")) {
+      headers.set("Content-Type", "application/json");
+    } else {
+      headers.set("Content-Type", "text/plain");
+    }
+  }
+
   const res = await fetch(resolveUrl(url), {
     ...init,
-    headers: buildHeaders(init.headers, init.body),
+    headers,
   });
+
   return parseResponse<T>(res);
 }
+
 
 /**
  * http.* methods return parsed JSON (typed) to match your existing usage:
@@ -166,4 +203,50 @@ export async function unwrap<T>(p: Promise<any> | any): Promise<T> {
   }
 
   return r as T;
+}
+
+export type ConfigureApiClientOptions = {
+  // Support both spellings
+  baseUrl?: string;
+  baseURL?: string;
+
+  // Optional: allow main.tsx to define where token lives
+  tokenStorageKey?: string;
+
+  // Optional direct token override
+  token?: string | null;
+
+  // Global unauthorized callback
+  onUnauthorized?: (() => void) | null;
+};
+
+let configuredTokenStorageKey: string | null = null;
+
+export function configureApiClient(opts: ConfigureApiClientOptions) {
+  const url = opts.baseUrl ?? opts.baseURL;
+  if (url !== undefined) setBaseUrl(url);
+
+  if (opts.tokenStorageKey) {
+    configuredTokenStorageKey = opts.tokenStorageKey;
+  }
+
+  if (opts.onUnauthorized !== undefined) {
+    setUnauthorizedHandler(opts.onUnauthorized);
+  }
+
+  // If token explicitly provided, use it.
+  if (opts.token !== undefined) {
+    setAccessToken(opts.token);
+    return;
+  }
+
+  // Otherwise, if tokenStorageKey provided, try to load token from localStorage.
+  if (configuredTokenStorageKey) {
+    try {
+      const t = localStorage.getItem(configuredTokenStorageKey);
+      setAccessToken(t);
+    } catch {
+      // ignore
+    }
+  }
 }

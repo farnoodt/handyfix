@@ -51,11 +51,11 @@ export type JobDetailDto = {
 };
 
 export function createJob(req: CreateJobRequest) {
-  return unwrap<JobDetailDto>(http.post<ApiResponse<JobDetailDto>>("/jobs", req));
+  return unwrap<JobDetailDto>(http.post<ApiResponse<JobDetailDto>>("/api/jobs", req));
 }
 
 export function getMyJobs() {
-  return unwrap<JobSummaryDto[]>(http.get<ApiResponse<JobSummaryDto[]>>("/jobs/mine"));
+  return unwrap<JobSummaryDto[]>(http.get<ApiResponse<JobSummaryDto[]>>("/api/jobs/mine"));
 }
 
 export function listJobs(params?: { page?: number; pageSize?: number; status?: JobStatus | "" }) {
@@ -64,18 +64,18 @@ export function listJobs(params?: { page?: number; pageSize?: number; status?: J
   if (params?.pageSize) p.set("pageSize", String(params.pageSize));
   if (params?.status) p.set("status", params.status);
   const qs = p.toString() ? `?${p.toString()}` : "";
-  return unwrap<PagedResult<JobSummaryDto>>(http.get<ApiResponse<PagedResult<JobSummaryDto>>>(`/jobs${qs}`));
+  return unwrap<PagedResult<JobSummaryDto>>(http.get<ApiResponse<PagedResult<JobSummaryDto>>>(`/api/jobs${qs}`));
 }
 
 export function getJob(id: string) {
-  return unwrap<JobDetailDto>(http.get<ApiResponse<JobDetailDto>>(`/jobs/${id}`));
+  return unwrap<JobDetailDto>(http.get<ApiResponse<JobDetailDto>>(`/api/jobs/${id}`));
 }
 
 export function updateJobStatus(
   id: string,
   req: { status: JobStatus; scheduledStart?: string | null; scheduledEnd?: string | null; internalNotes?: string | null }
 ) {
-  return unwrap<JobDetailDto>(http.patch<ApiResponse<JobDetailDto>>(`/jobs/${id}/status`, req));
+  return unwrap<JobDetailDto>(http.patch<ApiResponse<JobDetailDto>>(`/api/jobs/${id}/status`, req));
 }
 
 export function uploadJobMedia(id: string, type: MediaType, file: File) {
@@ -83,7 +83,7 @@ export function uploadJobMedia(id: string, type: MediaType, file: File) {
   form.append("file", file);
 
   return unwrap<JobMediaDto>(
-    http.post<ApiResponse<JobMediaDto>>(`/jobs/${id}/media?type=${type}`, form, {
+    http.post<ApiResponse<JobMediaDto>>(`/api/jobs/${id}/media?type=${type}`, form, {
       headers: { "Content-Type": "multipart/form-data" }
     })
   );

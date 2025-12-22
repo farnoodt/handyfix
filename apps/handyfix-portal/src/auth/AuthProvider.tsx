@@ -3,6 +3,7 @@ import {
   login as apiLogin,
   me as apiMe,
   setAccessToken,
+  setUnauthorizedHandler,
   type AuthResponse,
 } from "@handyfix/api-client";
 
@@ -47,8 +48,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   // ✅ Sync token into api-client whenever it changes (including first load)
   useEffect(() => {
-    setAccessToken(token);
-  }, [token]);
+      setAccessToken(token);
+    }, [token]);
+
+  useEffect(() => {
+    setUnauthorizedHandler(() => {
+      try {
+        localStorage.removeItem(TOKEN_KEY);
+      } catch {
+        // ignore
+      }
+      setToken(null);
+      setUser(null);
+    });
+
+    return () => {
+      setUnauthorizedHandler(null);
+    };
+  }, []);
 
   // Rehydrate session when token changes
   useEffect(() => {

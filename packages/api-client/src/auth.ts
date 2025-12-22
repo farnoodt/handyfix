@@ -1,4 +1,5 @@
-import { apiFetch } from "./http";
+import { http, unwrap } from "./http";
+import type { ApiResponse } from "./types";
 
 export type AuthResponse = {
   token: string;
@@ -8,12 +9,13 @@ export type AuthResponse = {
 };
 
 export function login(body: { email: string; password: string }) {
-  return apiFetch<AuthResponse>("/api/auth/login", {
-    method: "POST",
-    body: JSON.stringify(body),
-  });
+  return unwrap<AuthResponse>(
+    http.post<ApiResponse<AuthResponse>>("/api/auth/login", body)
+  );
 }
 
 export function me() {
-  return apiFetch<any>("/api/auth/me");
+  return unwrap<any>(
+    http.get<ApiResponse<any>>("/api/auth/me")
+  );
 }

@@ -16,11 +16,11 @@ export async function getCategories() {
 
 export async function getItems(categoryId?: number) {
   const qs = categoryId ? `?categoryId=${categoryId}` : "";
-  return unwrap<ServiceItemDto[]>(http.get<ApiResponse<ServiceItemDto[]>>(`/services/items${qs}`));
+  return unwrap<ServiceItemDto[]>(http.get<ApiResponse<ServiceItemDto[]>>(`/api/services/items${qs}`));
 }
 
 export async function createCategory(req: { name: string; description?: string | null }) {
-  return unwrap<ServiceCategoryDto>(http.post<ApiResponse<ServiceCategoryDto>>("/services/categories", req));
+  return unwrap<ServiceCategoryDto>(http.post<ApiResponse<ServiceCategoryDto>>("/api/services/categories", req));
 }
 
 export async function createItem(req: {
@@ -29,5 +29,5 @@ export async function createItem(req: {
   description?: string | null;
   startingPrice?: number | null;
 }) {
-  return unwrap<ServiceItemDto>(http.post<ApiResponse<ServiceItemDto>>("/services/items", req));
+  return unwrap<ServiceItemDto>(http.post<ApiResponse<ServiceItemDto>>("/api/services/items", req));
 }
