@@ -8,19 +8,11 @@ on:
       - "packages/**"
       - "package.json"
       - "package-lock.json"
-  pull_request:
-    types: [opened, synchronize, reopened, closed]
-    branches: [main]
-    paths:
-    - "apps/handyfix-web/**"
-    - "packages/**"
-    - "package.json"
-    - "package-lock.json"
 
 jobs:
   build_and_deploy:
-    if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.action != 'closed')
     runs-on: ubuntu-latest
+
     steps:
       - uses: actions/checkout@v4
 
@@ -36,13 +28,3 @@ jobs:
         env:
           VITE_API_BASE_URL: "https://rg-handyfix-prod-bngheqdafje9ghhb.westus2-01.azurewebsites.net"
           APP_BUILD_COMMAND: "npm ci && npm run build:web"
-
-  close_pr:
-    if: github.event_name == 'pull_request' && github.event.action == 'closed'
-    runs-on: ubuntu-latest
-    steps:
-      - name: Close PR (Web)
-        uses: Azure/static-web-apps-deploy@v1
-        with:
-          azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_YELLOW_WATER_05F581E1E }}
-          action: close
