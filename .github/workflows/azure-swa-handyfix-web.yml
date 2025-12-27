@@ -29,7 +29,7 @@ jobs:
         with:
           azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_YELLOW_WATER_05F581E1E }}
           repo_token: ${{ secrets.GITHUB_TOKEN }}
-          action: close
+          action: upload
           app_location: "apps/handyfix-web"
           api_location: ""
           output_location: "dist"
