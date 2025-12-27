@@ -2,13 +2,14 @@
   "name": "handyfix",
   "private": true,
   "workspaces": ["apps/*", "packages/*"],
+  "build": "npm run build:web && npm run build:portal",
   "scripts": {
   "dev:web": "npm run dev -w apps/handyfix-web",
   "dev:portal": "npm run dev -w apps/handyfix-portal",
   "dev": "concurrently -n web,portal \"npm run dev:web\" \"npm run dev:portal\"",
-  "build:web": "npm run build -w apps/handyfix-web",
-  "build:portal": "npm run build -w apps/handyfix-portal",
-  "build": "npm run build:web && npm run build:portal"
+  "build:api-client": "npm -w packages/api-client run build",
+  "build:web": "npm run build:api-client && npm run build -w apps/handyfix-web",
+  "build:portal": "npm run build:api-client && npm run build -w apps/handyfix-portal"
 },
   "devDependencies": {
     "concurrently": "^9.0.0"
