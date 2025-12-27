@@ -165,7 +165,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     () => ({
       user,
       token,
-      isAuthed: !!token,
+      isAuthed: !!token && !!user,
       loading,
       hasRole,
       isAdmin: hasRole("Admin"),

@@ -8,6 +8,7 @@ import Services from "./pages/Services.tsx";
 import BlogList from "./pages/BlogList.tsx";
 import BlogDetail from "./pages/BlogDetail.tsx";
 
+
 export default function App() {
   return (
     <Routes>

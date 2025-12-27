@@ -26,6 +26,9 @@ export default function PortalLayout() {
               <NavLink to="/services" className={({ isActive }) => (isActive ? "portal-link active" : "portal-link")}>
                 Services
               </NavLink>
+              <NavLink to="/leads" className={({ isActive }) => (isActive ? "portal-link active" : "portal-link")}>
+                leads
+              </NavLink>
               <NavLink to="/book" className={({ isActive }) => (isActive ? "portal-link active" : "portal-link")}>
                 Book
               </NavLink>

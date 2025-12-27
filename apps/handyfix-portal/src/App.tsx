@@ -16,6 +16,9 @@ import Login from "./pages/Login";
 import MyJobs from "./pages/jobs/MyJobs";
 import BookJob from "./pages/jobs/BookJob";
 import AdminHome from "./pages/admin/AdminHome";
+import LeadsPage from "./pages/LeadsPage";
+import AdminAiAssistant from "./pages/AdminAiAssistant";
+
 
 export default function App() {
   return (
@@ -27,8 +30,9 @@ export default function App() {
           <Route path="/blog" element={<BlogPage />} />
           <Route path="/blog/:slug" element={<BlogPostPage />} />
           <Route path="/contact" element={<ContactPage />} />
-
           <Route path="/login" element={<Login />} />
+          <Route path="admin/ai" element={<RequireAuth><AdminAiAssistant /></RequireAuth>} />
+          
           <Route
             path="/my-jobs"
             element={
@@ -45,6 +49,14 @@ export default function App() {
             element={
               <RequireAuth>
                 <BookJob />
+              </RequireAuth>
+            }
+          />
+                  <Route
+            path="/leads"
+            element={
+              <RequireAuth>
+                <LeadsPage />
               </RequireAuth>
             }
           />
