@@ -26,6 +26,7 @@ jobs:
           app_location: "apps/handyfix-web"
           api_location: ""
           output_location: "dist"
+          app_build_command: "npm ci && npm -w packages/api-client run build && npm run build:web"
         env:
           VITE_API_BASE_URL: "https://rg-handyfix-prod-bngheqdafje9ghhb.westus2-01.azurewebsites.net"
-          APP_BUILD_COMMAND: "npm ci && npm run build:web"
+          
