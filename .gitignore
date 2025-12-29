@@ -26,3 +26,8 @@ pnpm-debug.log*
 
 # Logs
 *.log
+
+# deps
+node_modules/
+apps/*/node_modules/
+packages/*/node_modules/

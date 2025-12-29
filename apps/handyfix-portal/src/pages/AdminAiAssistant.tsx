@@ -1,6 +1,8 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useAuth } from "../auth/AuthProvider";
-import { api } from "@handyfix/api-client";
+//import * as api from "@handyfix/api-client";
+import { apiFetch } from "@handyfix/api-client";
+
 
 type ChatMsg = { role: "system" | "user" | "assistant"; content: string };
 
@@ -32,8 +34,15 @@ export default function AdminAiAssistant() {
     setLoadingLead(true);
     try {
       // adjust if your api-client has a typed method; this is a safe default:
-      const res = await api.get(`/api/leads/${leadId}`, authHeaders as any);
-      setLead(res.data);
+      //const res = await api.get(`/api/leads/${leadId}`, authHeaders as any);
+      const lead = await apiFetch(`/api/leads/${leadId}`, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+      });
+      setLead(lead);
     } catch (e: any) {
       alert(e?.message ?? "Failed to load lead");
       setLead(null);
