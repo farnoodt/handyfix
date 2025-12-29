@@ -50,14 +50,14 @@ jobs:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           action: "upload"
 
-          # ✅ point to the app folder
-          app_location: "apps/handyfix-portal"
-          # ✅ output relative to app_location
-          output_location: "dist"
-
+          # ✅ upload the already-built folder directly
+          app_location: "apps/handyfix-portal/dist"
+          output_location: ""
           api_location: ""
+
           skip_app_build: true
           skip_api_build: true
+
 
   close_pr:
     if: github.event_name == 'pull_request' && github.event.action == 'closed'
