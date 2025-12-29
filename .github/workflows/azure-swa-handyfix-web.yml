@@ -31,7 +31,7 @@ jobs:
           node-version: "20"
           cache: "npm"
 
-      # IMPORTANT: install from repo root so workspaces work
+      # install FROM REPO ROOT so workspaces work
       - name: Install (root)
         run: npm ci
 
@@ -51,8 +51,8 @@ jobs:
           action: "upload"
 
           # Upload already-built artifacts (skip Oryx)
-          app_location: "apps/handyfix-web/dist"
-          output_location: ""
+          app_location: "apps/handyfix-web"
+          output_location: "dist"
           api_location: ""
 
           skip_app_build: true
